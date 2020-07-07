@@ -1,0 +1,114 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Audio/Video Example - Record Plugin for Video.js</title>
+
+  <link href="//vjs.zencdn.net/7.6.6/video-js.min.css" rel="stylesheet">
+  <link href="//unpkg.com/videojs-record/dist/css/videojs.record.min.css" rel="stylesheet">
+  <link href="assets/examples.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>  
+  <script src="//vjs.zencdn.net/7.6.6/video.min.js"></script>
+  <script src="//unpkg.com/recordrtc/RecordRTC.js"></script>
+  <script src="//unpkg.com/webrtc-adapter/out/adapter.js"></script>
+
+  <script src="//unpkg.com/videojs-record/dist/videojs.record.min.js"></script>
+
+  <script src="https://collab-project.github.io/videojs-record/demo/browser-workarounds.js"></script>
+  <script src="https://cdn.jsdelivr.net/sockjs/0.3.4/sockjs.min.js"></script>
+  <style>
+  /* change player background color */
+  #myVideo {
+      background-color: #9ab87a;
+  }
+  </style>
+</head>
+<body>
+
+<video id="myVideo" playsinline class="video-js vjs-default-skin">
+  <p class="vjs-no-js">
+    To view this video please enable JavaScript, or consider upgrading to a
+    web browser that
+    <a href="https://videojs.com/html5-video-support/" target="_blank">
+      supports HTML5 video.
+    </a>
+  </p>
+</video>
+
+<script>
+    function upload(data) {
+    sock.send(data);
+}
+var sock;
+var startedRecord = false;
+var options = {
+    controls: true,
+    bigPlayButton: false,
+    width: 320,
+    height: 240,
+    plugins: {
+        record: {
+            audio: true,
+            video: true,
+            maxLength:120,
+            displayMilliseconds: true,
+            debug: true,
+            
+        }
+    }
+};
+
+// apply some workarounds for certain browsers
+applyVideoWorkaround();
+
+var player = videojs('myVideo', options, function() {
+    // print version information at startup
+    var msg = 'Using video.js ' + videojs.VERSION +
+        ' with videojs-record ' + videojs.getPluginVersion('record') +
+        ' and recordrtc ' + RecordRTC.version;
+    videojs.log(msg);
+});
+var sockjs_url = 'https://192.168.86.151:9999/uploads';
+    console.log('connecting to websocket: ' + sockjs_url);
+    sock = new SockJS(sockjs_url);
+
+    // websocket event handlers
+    sock.onopen = function() {
+        console.log('connected to websocket: ' + sockjs_url);
+    };
+    sock.onmessage = function(e) {
+        console.log('message received: ', e.data);
+    };
+    sock.onclose = function() {
+        console.log('websocket connection closed.');
+    };
+
+// error handling
+player.on('deviceError', function() {
+    console.log('device error:', player.deviceErrorCode);
+});
+
+player.on('error', function(element, error) {
+    console.error(error);
+});
+
+// user clicked the record button and started recording
+player.on('startRecord', function() {
+    console.log('started recording!');
+    
+});
+
+// user completed recording and stream is available
+player.on('finishRecord', function() {
+    // the blob object contains the recorded data that
+    // can be downloaded by the user, stored on server etc.
+    console.log('finished recording: ', player.recordedData);
+    upload(player.recordedData);
+    //sock.send('stop');
+
+});
+</script>
+
+</body>
+</html>
